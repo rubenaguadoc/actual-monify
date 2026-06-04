@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis Finanzas</title>
+  <link rel="stylesheet" href="index.css" />
+</head>
+
+<body>
+  <div class="container">
+    <!-- Search toggle -->
+    <div class="search-toggle">
+      <button id="search-btn">🔍 Buscar</button>
+    </div>
+
+    <!-- Search panel -->
+    <div class="search-panel" id="search-panel">
+      <div class="search-input-row">
+        <input type="text" id="search-input" placeholder="Buscar concepto…">
+        <button id="search-go">Buscar</button>
+      </div>
+      <div class="search-results" id="search-results"></div>
+    </div>
+
+    <!-- Period selector pills -->
+    <div class="period-selector">
+      <button class="period-btn" data-period="day">Día</button>
+      <button class="period-btn" data-period="week">Semana</button>
+      <button class="period-btn active" data-period="month">Mes</button>
+      <button class="period-btn" data-period="year">Año</button>
+      <button class="period-btn" data-period="all">Todo</button>
+      <button class="period-btn" data-period="custom">Personalizado</button>
+    </div>
+
+    <!-- Custom date range -->
+    <div class="custom-dates" id="custom-dates">
+      <input type="date" id="date-from">
+      <span style="color:#666">→</span>
+      <input type="date" id="date-to">
+      <button class="apply-btn" id="apply-custom">Aplicar</button>
+    </div>
+
+    <!-- Period navigation -->
+    <div class="header">
+      <div class="month-nav">
+        <button id="prev-period">‹</button>
+        <span class="month-label" id="period-label"></span>
+        <button id="next-period">›</button>
+      </div>
+    </div>
+
+    <!-- Account filter -->
+    <div class="account-filter">
+      <select id="account-select">
+        <option value="all">Todas las cuentas</option>
+      </select>
+    </div>
+
+    <!-- Summary: 4 cards -->
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="label">Balance anterior</div>
+        <div class="amount carry" id="carry-amount">—</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Ingresos</div>
+        <div class="amount income" id="income-amount">—</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Gastos</div>
+        <div class="amount expense" id="expense-amount">—</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Balance final</div>
+        <div class="amount balance" id="balance-amount">—</div>
+      </div>
+    </div>
+
+    <!-- Content area -->
+    <div id="content">
+      <div class="loading">
+        <div class="spinner"></div>
+        Cargando datos…
+      </div>
+    </div>
+  </div>
+
+  <script src="index.js"></script>
+</body>
+
+</html>

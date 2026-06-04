@@ -1,0 +1,519 @@
+ * {
+   margin: 0;
+   padding: 0;
+   box-sizing: border-box;
+ }
+
+ body {
+   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+   background: #1a1a2e;
+   color: #eee;
+   min-height: 100vh;
+ }
+
+ .container {
+   max-width: 520px;
+   margin: 0 auto;
+   padding: 16px;
+ }
+
+ /* Header */
+ .header {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   margin-bottom: 16px;
+ }
+
+ .month-nav {
+   display: flex;
+   align-items: center;
+   gap: 12px;
+ }
+
+ .month-nav button {
+   background: none;
+   border: none;
+   color: #7c83ff;
+   font-size: 24px;
+   cursor: pointer;
+   padding: 4px 8px;
+   border-radius: 4px;
+ }
+
+ .month-nav button:hover {
+   background: rgba(124, 131, 255, 0.15);
+ }
+
+ .month-label {
+   font-size: 18px;
+   font-weight: 600;
+   min-width: 160px;
+   text-align: center;
+ }
+
+ /* Period selector */
+ .period-selector {
+   display: flex;
+   gap: 6px;
+   flex-wrap: wrap;
+   margin-bottom: 16px;
+ }
+
+ .period-btn {
+   padding: 6px 12px;
+   border-radius: 16px;
+   border: 1px solid #333;
+   background: #16213e;
+   color: #aaa;
+   font-size: 12px;
+   cursor: pointer;
+   transition: all 0.2s;
+ }
+
+ .period-btn:hover {
+   border-color: #7c83ff;
+   color: #ccc;
+ }
+
+ .period-btn.active {
+   background: #7c83ff;
+   color: #fff;
+   border-color: #7c83ff;
+ }
+
+ /* Custom date picker */
+ .custom-dates {
+   display: none;
+   gap: 8px;
+   margin-bottom: 16px;
+   align-items: center;
+ }
+
+ .custom-dates.visible {
+   display: flex;
+ }
+
+ .custom-dates input[type="date"] {
+   padding: 8px 10px;
+   border-radius: 8px;
+   border: 1px solid #333;
+   background: #16213e;
+   color: #eee;
+   font-size: 13px;
+ }
+
+ .custom-dates .apply-btn {
+   padding: 8px 14px;
+   border-radius: 8px;
+   border: none;
+   background: #7c83ff;
+   color: #fff;
+   font-size: 13px;
+   cursor: pointer;
+ }
+
+ /* Account filter */
+ .account-filter {
+   margin-bottom: 16px;
+ }
+
+ .account-filter select {
+   width: 100%;
+   padding: 10px 12px;
+   border-radius: 8px;
+   border: 1px solid #333;
+   background: #16213e;
+   color: #eee;
+   font-size: 14px;
+   cursor: pointer;
+ }
+
+ /* Summary cards */
+ .summary-grid {
+   display: grid;
+   grid-template-columns: 1fr 1fr;
+   gap: 10px;
+   margin-bottom: 12px;
+ }
+
+ .summary-card {
+   background: #16213e;
+   border-radius: 12px;
+   padding: 14px;
+   text-align: center;
+ }
+
+ .summary-card .label {
+   font-size: 11px;
+   color: #888;
+   text-transform: uppercase;
+   margin-bottom: 4px;
+   letter-spacing: 0.3px;
+ }
+
+ .summary-card .amount {
+   font-size: 18px;
+   font-weight: 700;
+ }
+
+ .summary-card .amount.income {
+   color: #4ecdc4;
+ }
+
+ .summary-card .amount.expense {
+   color: #ff6b6b;
+ }
+
+ .summary-card .amount.balance {
+   color: #7c83ff;
+ }
+
+ .summary-card .amount.carry {
+   color: #aaa;
+ }
+
+ .balance-final {
+   background: #16213e;
+   border-radius: 12px;
+   padding: 16px;
+   text-align: center;
+   margin-bottom: 24px;
+ }
+
+ .balance-final .label {
+   font-size: 11px;
+   color: #888;
+   text-transform: uppercase;
+   margin-bottom: 4px;
+   letter-spacing: 0.3px;
+ }
+
+ .balance-final .amount {
+   font-size: 26px;
+   font-weight: 700;
+   color: #7c83ff;
+ }
+
+ /* Section headers */
+ .section-header {
+   font-size: 13px;
+   font-weight: 600;
+   text-transform: uppercase;
+   letter-spacing: 0.5px;
+   color: #888;
+   margin: 20px 0 10px;
+   padding-left: 4px;
+ }
+
+ .section-header.income-header {
+   color: #4ecdc4;
+ }
+
+ .section-header.expense-header {
+   color: #ff6b6b;
+ }
+
+ /* Category list */
+ .category-list {
+   display: flex;
+   flex-direction: column;
+   gap: 4px;
+   margin-bottom: 16px;
+ }
+
+ .category-item {
+   background: #16213e;
+   border-radius: 10px;
+   overflow: hidden;
+   cursor: pointer;
+   transition: background 0.15s;
+ }
+
+ .category-item:hover {
+   background: #1b2845;
+ }
+
+ .category-header {
+   display: flex;
+   align-items: center;
+   gap: 12px;
+   padding: 12px 14px;
+ }
+
+ .category-icon {
+   width: 34px;
+   height: 34px;
+   border-radius: 8px;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   font-size: 15px;
+   flex-shrink: 0;
+ }
+
+ .category-info {
+   flex: 1;
+   min-width: 0;
+ }
+
+ .category-name-row {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   margin-bottom: 4px;
+ }
+
+ .category-name {
+   font-size: 14px;
+   font-weight: 500;
+ }
+
+ .category-count {
+   font-size: 11px;
+   color: #666;
+   background: #2a2a4a;
+   padding: 2px 7px;
+   border-radius: 10px;
+   margin-left: 8px;
+ }
+
+ .category-bar-container {
+   height: 5px;
+   background: #2a2a4a;
+   border-radius: 3px;
+   overflow: hidden;
+ }
+
+ .category-bar {
+   height: 100%;
+   border-radius: 3px;
+   transition: width 0.4s ease;
+ }
+
+ .category-amount {
+   font-size: 14px;
+   font-weight: 600;
+   white-space: nowrap;
+   margin-left: 12px;
+ }
+
+ .category-amount.expense {
+   color: #ff6b6b;
+ }
+
+ .category-amount.income {
+   color: #4ecdc4;
+ }
+
+ /* Collapsible transactions */
+ .category-transactions {
+   display: none;
+   border-top: 1px solid #2a2a4a;
+   padding: 0;
+ }
+
+ .category-transactions.open {
+   display: block;
+ }
+
+ .transaction-item {
+   display: flex;
+   align-items: center;
+   padding: 10px 14px 10px 60px;
+   border-bottom: 1px solid #1a1a2e;
+   gap: 10px;
+ }
+
+ .transaction-item:last-child {
+   border-bottom: none;
+ }
+
+ .transaction-date {
+   font-size: 12px;
+   color: #666;
+   min-width: 50px;
+ }
+
+ .transaction-payee {
+   flex: 1;
+   font-size: 13px;
+   color: #bbb;
+   white-space: nowrap;
+   overflow: hidden;
+   text-overflow: ellipsis;
+ }
+
+ .transaction-amount {
+   font-size: 13px;
+   font-weight: 600;
+   white-space: nowrap;
+ }
+
+ .transaction-amount.expense {
+   color: #ff6b6b;
+ }
+
+ .transaction-amount.income {
+   color: #4ecdc4;
+ }
+
+ /* Chevron */
+ .chevron {
+   color: #555;
+   font-size: 12px;
+   transition: transform 0.2s;
+   margin-left: 4px;
+ }
+
+ .category-item.open .chevron {
+   transform: rotate(90deg);
+ }
+
+ /* Loading */
+ .loading {
+   text-align: center;
+   padding: 40px;
+   color: #888;
+ }
+
+ .spinner {
+   width: 32px;
+   height: 32px;
+   border: 3px solid #333;
+   border-top-color: #7c83ff;
+   border-radius: 50%;
+   animation: spin 0.8s linear infinite;
+   margin: 0 auto 12px;
+ }
+
+ @keyframes spin {
+   to {
+     transform: rotate(360deg);
+   }
+ }
+
+ .empty {
+   text-align: center;
+   padding: 40px;
+   color: #666;
+ }
+
+ /* Search */
+ .search-toggle {
+   display: flex;
+   justify-content: flex-end;
+   margin-bottom: 12px;
+ }
+
+ .search-toggle button {
+   background: #16213e;
+   border: 1px solid #333;
+   color: #aaa;
+   padding: 8px 14px;
+   border-radius: 8px;
+   cursor: pointer;
+   font-size: 13px;
+ }
+
+ .search-toggle button:hover {
+   border-color: #7c83ff;
+   color: #ccc;
+ }
+
+ .search-toggle button.active {
+   background: #7c83ff;
+   color: #fff;
+   border-color: #7c83ff;
+ }
+
+ .search-panel {
+   display: none;
+   margin-bottom: 16px;
+ }
+
+ .search-panel.visible {
+   display: block;
+ }
+
+ .search-input-row {
+   display: flex;
+   gap: 8px;
+ }
+
+ .search-input-row input {
+   flex: 1;
+   padding: 10px 12px;
+   border-radius: 8px;
+   border: 1px solid #333;
+   background: #16213e;
+   color: #eee;
+   font-size: 14px;
+ }
+
+ .search-input-row input:focus {
+   outline: none;
+   border-color: #7c83ff;
+ }
+
+ .search-input-row button {
+   padding: 10px 16px;
+   border-radius: 8px;
+   border: none;
+   background: #7c83ff;
+   color: #fff;
+   font-size: 14px;
+   cursor: pointer;
+ }
+
+ .search-results {
+   margin-top: 12px;
+ }
+
+ .search-result-item {
+   display: flex;
+   align-items: center;
+   padding: 10px 14px;
+   background: #16213e;
+   border-radius: 8px;
+   margin-bottom: 4px;
+   gap: 10px;
+ }
+
+ .search-result-item .sr-date {
+   font-size: 12px;
+   color: #666;
+   min-width: 70px;
+ }
+
+ .search-result-item .sr-payee {
+   flex: 1;
+   font-size: 13px;
+   color: #bbb;
+   white-space: nowrap;
+   overflow: hidden;
+   text-overflow: ellipsis;
+ }
+
+ .search-result-item .sr-account {
+   font-size: 11px;
+   color: #555;
+   max-width: 80px;
+   white-space: nowrap;
+   overflow: hidden;
+   text-overflow: ellipsis;
+ }
+
+ .search-result-item .sr-amount {
+   font-size: 13px;
+   font-weight: 600;
+   white-space: nowrap;
+ }
+
+ .search-result-item .sr-amount.expense {
+   color: #ff6b6b;
+ }
+
+ .search-result-item .sr-amount.income {
+   color: #4ecdc4;
+ }
