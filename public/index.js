@@ -110,6 +110,15 @@ const ICONS = {
   Investment: '\uD83D\uDCC8',
   Restaurantes: '\uD83C\uDF7D\uFE0F',
   Restaurant: '\uD83C\uDF7D\uFE0F',
+  'Eating out': '\uD83C\uDF7D\uFE0F',
+  'Eating Out': '\uD83C\uDF7D\uFE0F',
+  Taxi: '\uD83D\uDE95',
+  Car: '\uD83D\uDE97',
+  Coche: '\uD83D\uDE97',
+  Communications: '\uD83D\uDCF1',
+  Comunicaciones: '\uD83D\uDCF1',
+  Ajustes: '\u2699\uFE0F',
+  Settings: '\u2699\uFE0F',
   'Caf\u00E9': '\u2615',
   Coffee: '\u2615',
   Pagado: '\uD83D\uDE0A',
@@ -715,6 +724,13 @@ document.getElementById('prev-period').addEventListener('click', () => {
 document.getElementById('next-period').addEventListener('click', () => {
   navigatePeriod(1);
   loadDataWithAnimation('left');
+});
+
+// Today button -> go to current period
+document.getElementById('today-btn').addEventListener('click', () => {
+  currentDate = new Date();
+  saveState();
+  loadData();
 });
 
 // Period label click -> date picker
