@@ -2,7 +2,13 @@ services:
   data-viewer:
     build: .
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     env_file:
       - .env
     restart: unless-stopped
+    networks:
+      - app-net
+
+networks:
+  app-net:
+    external: true
