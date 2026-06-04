@@ -2,13 +2,11 @@
 
 set -e
 
-git checkout -- deploy.sh
-git pull
-chmod +x deploy.sh
-
 CONTAINER=data-viewer
 IMAGE=data-viewer:latest
 NETWORK=app-net
+
+git pull
 
 docker network create $NETWORK 2>/dev/null || true
 
