@@ -184,7 +184,11 @@ app.get('/api/search', async (req, res) => {
       return res.json([]);
     }
 
-    const query = q.toLowerCase().trim();
+    const query = q
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
     const accounts = await api.getAccounts();
     const accountMap = {};
     for (const a of accounts) accountMap[a.id] = a.name;
@@ -218,9 +222,18 @@ app.get('/api/search', async (req, res) => {
       );
       for (const t of txns) {
         const resolvedPayeeName = payeeNameMap[t.payee] || '';
-        const payee = resolvedPayeeName.toLowerCase();
-        const notes = (t.notes || '').toLowerCase();
-        const imported = (t.imported_payee || '').toLowerCase();
+        const payee = resolvedPayeeName
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
+        const notes = (t.notes || '')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
+        const imported = (t.imported_payee || '')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
         let match =
           payee.includes(query) ||
           notes.includes(query) ||
