@@ -62,7 +62,7 @@
           <line x1="3" y1="18" x2="21" y2="18" />
         </svg>
       </button>
-      <h1 class="app-title">Mis Finanzas</h1>
+      <h1 class="app-title" id="app-title">Mis Finanzas</h1>
       <button class="search-btn" id="search-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="8" />
@@ -74,13 +74,15 @@
     <!-- Search modal -->
     <div class="search-modal-overlay" id="search-modal-overlay">
       <div class="search-modal">
-        <div class="search-modal-header">
-          <span class="search-modal-title">Buscar</span>
-          <button class="search-modal-close" id="search-modal-close">✕</button>
-        </div>
-        <div class="search-input-row">
-          <input type="text" id="search-input" placeholder="Buscar concepto…">
-          <button id="search-go">Buscar</button>
+        <div class="search-modal-top">
+          <div class="search-modal-header">
+            <span class="search-modal-title">Buscar</span>
+            <button class="search-modal-close" id="search-modal-close">✕</button>
+          </div>
+          <div class="search-input-row">
+            <input type="text" id="search-input" placeholder="Buscar concepto…">
+            <button id="search-go">Buscar</button>
+          </div>
         </div>
         <div class="search-results" id="search-results"></div>
       </div>

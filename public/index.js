@@ -133,23 +133,12 @@ function getColor(name) {
 
 function formatMoney(amount) {
   const value = amount / 100;
-  return (
-    value.toLocaleString('es-ES', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }) + ' \u20AC'
-  );
+  return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 }
 
 function formatMoneyShort(amount) {
   const value = Math.abs(amount) / 100;
-  return (
-    '\u20AC' +
-    value.toLocaleString('es-ES', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
-  );
+  return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 }
 
 function formatDateShort(dateStr) {
@@ -309,6 +298,12 @@ function updateAccountCurrent() {
     '</span><span class="account-label">' +
     escapeHtml(name) +
     '</span><span class="account-currency">EUR</span><span class="dropdown-arrow">\u25BE</span>';
+
+  // Update mobile top bar title with account info
+  const titleEl = document.getElementById('app-title');
+  if (titleEl) {
+    titleEl.textContent = icon + ' ' + name;
+  }
 }
 
 function buildAccountList() {
