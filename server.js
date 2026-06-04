@@ -5,8 +5,10 @@ const api = require('@actual-app/api');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const SYNC_INTERVAL_MS = (process.env.SYNC_INTERVAL_MINUTES || 5) * 60 * 1000;
 
 let initialized = false;
+let syncInterval = null;
 
 async function ensureInit() {
   if (initialized) return;
@@ -30,6 +32,16 @@ async function ensureInit() {
   await api.init({ dataDir, serverURL, password });
   await api.downloadBudget(syncId);
   initialized = true;
+
+  // Periodic sync to pull remote changes
+  syncInterval = setInterval(async () => {
+    try {
+      await api.sync();
+      console.log(`[${new Date().toISOString()}] Synced with Actual server`);
+    } catch (err) {
+      console.error(`[${new Date().toISOString()}] Sync failed:`, err.message);
+    }
+  }, SYNC_INTERVAL_MS);
 }
 
 // Serve static files
@@ -84,8 +96,20 @@ app.get('/api/transactions', async (req, res) => {
     // Actual API uses inclusive endDate, so subtract one day
     const endInclusive = dayBefore(endDate);
 
-    // Get all accounts to resolve names
+    // Get all accounts and payees to resolve transfer destinations
     const accounts = await api.getAccounts();
+    const accountMap = {};
+    for (const a of accounts) accountMap[a.id] = a.name;
+
+    const payees = await api.getPayees();
+    const transferPayeeMap = {};
+    const payeeNameMap = {};
+    for (const p of payees) {
+      if (p.transfer_acct) {
+        transferPayeeMap[p.id] = accountMap[p.transfer_acct] || null;
+      }
+      payeeNameMap[p.id] = p.name || null;
+    }
 
     let transactions = [];
     const targetAccounts =
@@ -100,6 +124,8 @@ app.get('/api/transactions', async (req, res) => {
           ...t,
           account_id: acct.id,
           account_name: acct.name,
+          payee_name: payeeNameMap[t.payee] || null,
+          transfer_acct_name: transferPayeeMap[t.payee] || null,
         })),
       );
     }
@@ -148,7 +174,7 @@ app.get('/api/balance', async (req, res) => {
   }
 });
 
-// API: Search transactions by text (payee/notes) across all accounts
+// API: Search transactions by text (payee/notes) or amount across all accounts
 app.get('/api/search', async (req, res) => {
   try {
     await ensureInit();
@@ -160,7 +186,29 @@ app.get('/api/search', async (req, res) => {
 
     const query = q.toLowerCase().trim();
     const accounts = await api.getAccounts();
+    const accountMap = {};
+    for (const a of accounts) accountMap[a.id] = a.name;
+
+    const payees = await api.getPayees();
+    const transferPayeeMap = {};
+    const payeeNameMap = {};
+    for (const p of payees) {
+      if (p.transfer_acct) {
+        transferPayeeMap[p.id] = accountMap[p.transfer_acct] || null;
+      }
+      payeeNameMap[p.id] = p.name || null;
+    }
     const results = [];
+
+    // Check if query looks like a number (supports comma as decimal separator)
+    const numQuery = query.replace(',', '.');
+    const queryAmount = parseFloat(numQuery);
+    const isNumericSearch =
+      !isNaN(queryAmount) && numQuery.match(/^\d+([.,]\d+)?$/);
+    // Convert to cents for comparison
+    const queryAmountCents = isNumericSearch
+      ? Math.round(queryAmount * 100)
+      : 0;
 
     for (const acct of accounts) {
       const txns = await api.getTransactions(
@@ -169,15 +217,28 @@ app.get('/api/search', async (req, res) => {
         '2099-12-31',
       );
       for (const t of txns) {
-        const payee = (t.payee_name || '').toLowerCase();
+        const resolvedPayeeName = payeeNameMap[t.payee] || '';
+        const payee = resolvedPayeeName.toLowerCase();
         const notes = (t.notes || '').toLowerCase();
         const imported = (t.imported_payee || '').toLowerCase();
-        if (
+        let match =
           payee.includes(query) ||
           notes.includes(query) ||
-          imported.includes(query)
-        ) {
-          results.push({ ...t, account_id: acct.id, account_name: acct.name });
+          imported.includes(query);
+
+        // Also match by amount
+        if (!match && isNumericSearch) {
+          match = Math.abs(t.amount) === queryAmountCents;
+        }
+
+        if (match) {
+          results.push({
+            ...t,
+            account_id: acct.id,
+            account_name: acct.name,
+            payee_name: resolvedPayeeName || null,
+            transfer_acct_name: transferPayeeMap[t.payee] || null,
+          });
         }
       }
     }
@@ -185,6 +246,17 @@ app.get('/api/search', async (req, res) => {
     // Sort by date descending
     results.sort((a, b) => b.date.localeCompare(a.date));
     res.json(results);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: Force sync with Actual server
+app.post('/api/sync', async (req, res) => {
+  try {
+    await ensureInit();
+    await api.sync();
+    res.json({ ok: true, syncedAt: new Date().toISOString() });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -203,6 +275,7 @@ app.listen(PORT, async () => {
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
+  if (syncInterval) clearInterval(syncInterval);
   try {
     await api.shutdown();
   } catch (_) {}

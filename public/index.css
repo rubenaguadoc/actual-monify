@@ -53,6 +53,56 @@ body {
   border-bottom: none;
 }
 
+.sidebar-sync {
+  margin-top: auto;
+}
+
+.sync-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #4a4a4a;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sync-btn:hover {
+  background: #5a5a5a;
+}
+
+.sync-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sync-btn .sync-icon.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sync-status {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #aaa;
+  text-align: center;
+}
+
 /* Account selector in sidebar */
 .sidebar-account-selector {
   position: relative;
@@ -220,8 +270,19 @@ body {
 .main-content {
   max-width: 600px;
   margin: 0 auto;
-  padding: 0 16px 24px;
+  padding: 0 16px 80px;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sticky header */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #2d2d2d;
+  padding-bottom: 8px;
 }
 
 /* Top bar */
@@ -968,6 +1029,49 @@ body {
   color: #888;
 }
 
+/* ===== FAB ===== */
+.fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  min-height: 56px;
+  border-radius: 50%;
+  background: #4a8c4a;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  text-decoration: none;
+  z-index: 50;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.fab:active {
+  transform: scale(0.95);
+}
+
+/* Clickable transactions */
+.transaction-item,
+.date-tx-item,
+.search-result-item {
+  cursor: pointer;
+}
+
+.transaction-item:hover,
+.date-tx-item:hover,
+.search-result-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
 /* ===== DESKTOP LAYOUT ===== */
 @media (min-width: 768px) {
   .sidebar {
@@ -1003,6 +1107,11 @@ body {
   .main-content>.search-modal-overlay {
     max-width: none;
     width: auto;
+  }
+
+  .main-content>.fab {
+    max-width: none;
+    width: 56px;
   }
 
   .period-nav {

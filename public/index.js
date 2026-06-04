@@ -9,6 +9,30 @@ let transactions = [];
 let selectedAccount = 'all';
 let carryOverBalance = 0;
 
+// Restore state from localStorage
+(function restoreState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('viewerState'));
+    if (!saved) return;
+    if (saved.account) selectedAccount = saved.account;
+    if (saved.period) period = saved.period;
+    if (saved.date) currentDate = new Date(saved.date + 'T00:00:00');
+  } catch (e) {
+    /* ignore */
+  }
+})();
+
+function saveState() {
+  localStorage.setItem(
+    'viewerState',
+    JSON.stringify({
+      account: selectedAccount,
+      period: period,
+      date: toDateStr(currentDate),
+    }),
+  );
+}
+
 // Account icons mapping
 const ACCOUNT_ICONS = {
   'All accounts': '\uD83C\uDFF7\uFE0F',
@@ -96,7 +120,7 @@ function getIcon(name) {
   for (const [key, icon] of Object.entries(ICONS)) {
     if (name.toLowerCase().includes(key.toLowerCase())) return icon;
   }
-  if (name.startsWith('To ') || name.startsWith('From ')) return '\u21C4';
+  if (name.startsWith('\u2192 ') || name.startsWith('To ') || name.startsWith('From ')) return '\u21C4';
   return '\uD83D\uDCE6';
 }
 
@@ -272,6 +296,7 @@ function navigatePeriod(direction) {
     currentDate.setMonth(currentDate.getMonth() + direction);
   else if (period === 'year')
     currentDate.setFullYear(currentDate.getFullYear() + direction);
+  saveState();
 }
 
 // ---- Sidebar ----
@@ -334,6 +359,7 @@ function buildAccountList() {
   listEl.querySelectorAll('.sidebar-account-item').forEach((item) => {
     item.addEventListener('click', () => {
       selectedAccount = item.dataset.account;
+      saveState();
       updateAccountCurrent();
       listEl.classList.remove('open');
       closeSidebar();
@@ -433,9 +459,16 @@ function render() {
 function renderCategoryView(relevant, incomeCatIds) {
   const catData = {};
   for (const t of relevant) {
-    const catId = t.category || '__uncategorized__';
-    const isIncomeCat = incomeCatIds.has(catId);
+    const isIncomeCat = incomeCatIds.has(t.category);
     const isIncome = isIncomeCat || t.amount > 0;
+
+    // For transfers, group by destination account
+    let catId;
+    if (t.transfer_acct_name) {
+      catId = '__transfer__' + t.transfer_acct_name;
+    } else {
+      catId = t.category || '__uncategorized__';
+    }
 
     let key;
     if (isIncomeCat) key = catId + ':income';
@@ -457,11 +490,16 @@ function renderCategoryView(relevant, incomeCatIds) {
   const expenseCategories = [];
 
   for (const [key, data] of Object.entries(catData)) {
-    const cat = categories.find((c) => c.id === data.catId);
-    const name =
-      data.catId === '__uncategorized__'
-        ? 'Transfers'
-        : cat?.name || 'Sin categor\u00EDa';
+    let name;
+    if (data.catId.startsWith('__transfer__')) {
+      const acctName = data.catId.replace('__transfer__', '');
+      name = '\u2192 ' + acctName;
+    } else if (data.catId === '__uncategorized__') {
+      name = 'Sin categor\u00EDa';
+    } else {
+      const cat = categories.find((c) => c.id === data.catId);
+      name = cat?.name || 'Sin categor\u00EDa';
+    }
     const entry = {
       id: key,
       name,
@@ -542,12 +580,16 @@ function renderDateView(relevant, incomeCatIds) {
     let txHtml = '';
     for (const t of txs) {
       const cat = categories.find((c) => c.id === t.category);
-      const catName = cat?.name || 'Transfers';
-      const payee = t.payee_name || t.notes || '\u2014';
+      let catName = t.transfer_acct_name
+        ? '\u2192 ' + t.transfer_acct_name
+        : cat?.name || 'Sin categor\u00EDa';
+      const payee = t.transfer_acct_name
+        ? (t.notes || '\u2014')
+        : (t.payee_name || t.notes || '\u2014');
       const dotClass = t.amount < 0 ? 'expense' : 'income';
       const amtTxClass = t.amount < 0 ? 'expense' : 'income';
       txHtml +=
-        '<div class="date-tx-item"><span class="date-tx-dot ' +
+        '<div class="date-tx-item" data-tx-id="' + t.id + '"><span class="date-tx-dot ' +
         dotClass +
         '"></span><span class="date-tx-category">' +
         escapeHtml(catName) +
@@ -589,10 +631,12 @@ function renderCategory(cat, type) {
 
   let txHtml = cat.transactions
     .map((t) => {
-      const payee = t.payee_name || t.notes || '\u2014';
+      const payee = t.transfer_acct_name
+        ? (t.notes || '\u2014')
+        : (t.payee_name || t.notes || '\u2014');
       const amtClass = t.amount < 0 ? 'expense' : 'income';
       return (
-        '<div class="transaction-item"><span class="transaction-dot ' +
+        '<div class="transaction-item" data-tx-id="' + t.id + '"><span class="transaction-dot ' +
         amtClass +
         '"></span><span class="transaction-amount ' +
         amtClass +
@@ -688,6 +732,7 @@ periodDatePicker.addEventListener('change', () => {
   const val = periodDatePicker.value;
   if (!val) return;
   currentDate = new Date(val + 'T00:00:00');
+  saveState();
   loadData();
 });
 
@@ -750,6 +795,11 @@ document
   });
 
 // Period buttons in sidebar
+// Sync period button active state from restored state
+document.querySelectorAll('.sidebar-period-btn').forEach((b) => {
+  b.classList.toggle('active', b.dataset.period === period);
+});
+
 document.querySelectorAll('.sidebar-period-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
     document
@@ -757,6 +807,7 @@ document.querySelectorAll('.sidebar-period-btn').forEach((btn) => {
       .forEach((b) => b.classList.remove('active'));
     btn.classList.add('active');
     period = btn.dataset.period;
+    saveState();
     const customDates = document.getElementById('custom-dates');
     if (period === 'custom') {
       customDates.classList.add('visible');
@@ -813,6 +864,16 @@ document
   .addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeSearchModal();
   });
+document.addEventListener('keydown', (e) => {
+  if (
+    e.key === 'Escape' &&
+    document
+      .getElementById('search-modal-overlay')
+      .classList.contains('visible')
+  ) {
+    closeSearchModal();
+  }
+});
 
 async function performSearch() {
   const query = document.getElementById('search-input').value.trim();
@@ -834,7 +895,9 @@ async function performSearch() {
 
   resultsEl.innerHTML = results
     .map((t) => {
-      const payee = t.payee_name || t.notes || '\u2014';
+      const payee = t.transfer_acct_name
+        ? (t.notes || '\u2014')
+        : (t.payee_name || t.notes || '\u2014');
       const amtClass = t.amount < 0 ? 'expense' : 'income';
       const date = new Date(t.date + 'T00:00:00').toLocaleDateString('es-ES', {
         day: 'numeric',
@@ -842,7 +905,7 @@ async function performSearch() {
         year: 'numeric',
       });
       return (
-        '<div class="search-result-item"><span class="sr-date">' +
+        '<div class="search-result-item" data-tx-id="' + t.id + '"><span class="sr-date">' +
         date +
         '</span><span class="sr-payee">' +
         escapeHtml(payee) +
@@ -904,9 +967,46 @@ async function loadDataWithAnimation(direction) {
   render();
 }
 
+// ---- Sync ----
+document.getElementById('sync-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('sync-btn');
+  const icon = btn.querySelector('.sync-icon');
+  const status = document.getElementById('sync-status');
+  btn.disabled = true;
+  icon.classList.add('spinning');
+  status.textContent = 'Sincronizando…';
+  try {
+    const resp = await fetch('/api/sync', { method: 'POST' });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Error');
+    status.textContent =
+      'Sincronizado ' + new Date(data.syncedAt).toLocaleTimeString('es-ES');
+    // Reload all data
+    await Promise.all([fetchAccounts(), fetchCategories()]);
+    await Promise.all([fetchTransactions(), fetchCarryOver()]);
+    render();
+  } catch (err) {
+    status.textContent = 'Error: ' + err.message;
+  } finally {
+    btn.disabled = false;
+    icon.classList.remove('spinning');
+  }
+});
+
 // ---- Init ----
 (async () => {
   await Promise.all([fetchAccounts(), fetchCategories()]);
   await Promise.all([fetchTransactions(), fetchCarryOver()]);
   render();
 })();
+
+// ---- Transaction click to edit in Actual Budget ----
+document.addEventListener('click', (e) => {
+  const item = e.target.closest('[data-tx-id]');
+  if (!item) return;
+  e.stopPropagation();
+  const id = item.getAttribute('data-tx-id');
+  if (id) {
+    window.open('https://money.dpsconsulting.es/transactions/' + id, '_blank', 'noopener');
+  }
+});
