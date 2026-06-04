@@ -126,8 +126,10 @@ const ICONS = {
 
 function getIcon(name) {
   if (ICONS[name]) return ICONS[name];
+  const nameLower = name.toLowerCase();
   for (const [key, icon] of Object.entries(ICONS)) {
-    if (name.toLowerCase().includes(key.toLowerCase())) return icon;
+    const re = new RegExp('\\b' + key.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+    if (re.test(nameLower)) return icon;
   }
   if (name.startsWith('\u2192 ') || name.startsWith('To ') || name.startsWith('From ')) return '\u21C4';
   return '\uD83D\uDCE6';
