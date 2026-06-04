@@ -676,9 +676,9 @@ body {
 .transaction-item {
   display: flex;
   align-items: center;
-  padding: 10px 14px 10px 44px;
+  padding: 10px 14px 10px 16px;
   border-bottom: 1px solid #2d2d2d;
-  gap: 8px;
+  gap: 12px;
 }
 
 .transaction-item:last-child {
@@ -690,6 +690,7 @@ body {
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+  display: none;
 }
 
 .transaction-dot.expense {
@@ -704,7 +705,9 @@ body {
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
-  min-width: 56px;
+  width: 72px;
+  min-width: 72px;
+  text-align: right;
 }
 
 .transaction-amount.expense {
@@ -1151,7 +1154,7 @@ body {
   }
 
   .transaction-item {
-    padding-left: 54px;
+    padding-left: 44px;
   }
 }
 
