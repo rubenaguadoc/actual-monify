@@ -313,24 +313,48 @@ app.post('/api/transactions', async (req, res) => {
     }
 
     if (transfer_dest_id) {
-      // Transfer: use the transfer payee for the destination account
+      // Transfer: insert both sides with cross-linked transfer_id UUIDs
+      const crypto = require('crypto');
       const payees = await api.getPayees();
-      const transferPayee = payees.find(
+
+      // Find transfer payees for each direction
+      const payeeToDest = payees.find(
         (p) => p.transfer_acct === transfer_dest_id,
       );
-      if (!transferPayee) {
+      const payeeToSource = payees.find((p) => p.transfer_acct === account_id);
+      if (!payeeToDest || !payeeToSource) {
         return res.status(400).json({
-          error: 'Could not find transfer payee for destination account',
+          error: 'Could not find transfer payees for the accounts',
         });
       }
-      const txn = {
+
+      const sourceId = crypto.randomUUID();
+      const destId = crypto.randomUUID();
+
+      // Source side (outflow)
+      const sourceTxn = {
+        id: sourceId,
         date,
         amount: amountInt,
-        payee: transferPayee.id,
+        payee: payeeToDest.id,
+        transfer_id: destId,
         notes: notes || undefined,
         cleared: true,
       };
-      await api.addTransactions(account_id, [txn]);
+
+      // Destination side (inflow)
+      const destTxn = {
+        id: destId,
+        date,
+        amount: -amountInt,
+        payee: payeeToSource.id,
+        transfer_id: sourceId,
+        notes: notes || undefined,
+        cleared: true,
+      };
+
+      await api.addTransactions(account_id, [sourceTxn]);
+      await api.addTransactions(transfer_dest_id, [destTxn]);
     } else {
       const txn = {
         date,
