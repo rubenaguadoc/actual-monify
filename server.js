@@ -319,11 +319,9 @@ app.post('/api/transactions', async (req, res) => {
         (p) => p.transfer_acct === transfer_dest_id,
       );
       if (!transferPayee) {
-        return res
-          .status(400)
-          .json({
-            error: 'Could not find transfer payee for destination account',
-          });
+        return res.status(400).json({
+          error: 'Could not find transfer payee for destination account',
+        });
       }
       const txn = {
         date,
@@ -388,9 +386,21 @@ app.put('/api/transactions/:id', async (req, res) => {
         fields.category = null;
       }
     } else if (payee_name !== undefined) {
-      // For non-transfer, update payee by name (clear transfer payee)
-      // We need to find or create the payee
-      fields.payee_name = payee_name || null;
+      // For non-transfer, find or create the payee by name
+      if (payee_name) {
+        const payees = await api.getPayees();
+        let payee = payees.find(
+          (p) => p.name && p.name.toLowerCase() === payee_name.toLowerCase(),
+        );
+        if (!payee) {
+          const newId = await api.createPayee({ name: payee_name });
+          fields.payee = newId;
+        } else {
+          fields.payee = payee.id;
+        }
+      } else {
+        fields.payee = null;
+      }
     }
 
     fields.cleared = true;

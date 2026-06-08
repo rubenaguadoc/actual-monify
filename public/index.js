@@ -1637,3 +1637,11 @@ document.getElementById('newtx-delete').addEventListener('click', async () => {
     btn.textContent = 'Eliminar transacción';
   }
 });
+
+// Prevent accidental navigation (Android back button) while modal is open
+window.addEventListener('beforeunload', (e) => {
+  if (document.getElementById('newtx-overlay').classList.contains('visible')) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});

@@ -583,6 +583,7 @@ body {
   overflow: hidden;
   cursor: pointer;
   transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .category-item:hover {
@@ -748,6 +749,7 @@ body {
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .date-group-header:hover {
