@@ -80,11 +80,11 @@
         <h1 class="app-title" id="app-title">Mis Finanzas</h1>
         <button class="today-btn" id="today-btn" title="Ir al periodo actual">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-            <circle cx="12" cy="16" r="2" fill="currentColor" stroke="none"/>
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+            <circle cx="12" cy="16" r="2" fill="currentColor" stroke="none" />
           </svg>
         </button>
         <button class="search-btn" id="search-btn">
@@ -180,11 +180,84 @@
     </div>
 
     <!-- FAB: new transaction -->
-    <a class="fab" id="fab-new" href="https://money.dpsconsulting.es/transactions/new" target="_blank" rel="noopener" title="Nueva transacción">
+    <button class="fab" id="fab-new" title="Nueva transacción">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
       </svg>
-    </a>
+    </button>
+
+    <!-- New transaction modal -->
+    <div class="newtx-overlay" id="newtx-overlay">
+      <div class="newtx-modal">
+        <div class="newtx-header">
+          <span class="newtx-title" id="newtx-title">Nueva transacción</span>
+          <button class="newtx-close" id="newtx-close">✕</button>
+        </div>
+        <form class="newtx-form" id="newtx-form" autocomplete="off">
+          <!-- Date -->
+          <div class="newtx-field">
+            <label for="newtx-date">Fecha</label>
+            <input type="date" id="newtx-date" required>
+          </div>
+          <!-- Type -->
+          <div class="newtx-field">
+            <label for="newtx-type">Tipo</label>
+            <select id="newtx-type">
+              <option value="expense">Gasto</option>
+              <option value="income">Ingreso</option>
+              <option value="transfer">Transferencia</option>
+            </select>
+          </div>
+          <!-- Account -->
+          <div class="newtx-field">
+            <label for="newtx-account-input">Cuenta origen</label>
+            <div class="newtx-filterable" id="newtx-account-wrapper">
+              <input type="text" id="newtx-account-input" placeholder="Buscar cuenta…" autocomplete="off" required>
+              <input type="hidden" id="newtx-account-value">
+              <div class="newtx-dropdown" id="newtx-account-dropdown"></div>
+            </div>
+          </div>
+          <!-- Amount -->
+          <div class="newtx-field">
+            <label for="newtx-amount">Importe</label>
+            <input type="number" id="newtx-amount" inputmode="decimal" step="0.01" placeholder="0,00" required>
+          </div>
+          <!-- Category (hidden for transfers) -->
+          <div class="newtx-field" id="newtx-category-field">
+            <label for="newtx-category-input">Categoría</label>
+            <div class="newtx-filterable" id="newtx-category-wrapper">
+              <input type="text" id="newtx-category-input" placeholder="Buscar categoría…" autocomplete="off" required>
+              <input type="hidden" id="newtx-category-value">
+              <div class="newtx-dropdown" id="newtx-category-dropdown"></div>
+            </div>
+          </div>
+          <!-- Transfer destination (shown only for transfers) -->
+          <div class="newtx-field" id="newtx-dest-field" style="display:none">
+            <label for="newtx-dest-input">Cuenta destino</label>
+            <div class="newtx-filterable" id="newtx-dest-wrapper">
+              <input type="text" id="newtx-dest-input" placeholder="Buscar cuenta destino…" autocomplete="off">
+              <input type="hidden" id="newtx-dest-value">
+              <div class="newtx-dropdown" id="newtx-dest-dropdown"></div>
+            </div>
+          </div>
+          <!-- Payee / Description -->
+          <div class="newtx-field">
+            <label for="newtx-payee-input">Descripción</label>
+            <div class="newtx-filterable" id="newtx-payee-wrapper">
+              <input type="text" id="newtx-payee-input" placeholder="Buscar o escribir destinatario…" autocomplete="off"
+                required>
+              <div class="newtx-dropdown" id="newtx-payee-dropdown"></div>
+            </div>
+          </div>
+          <!-- Submit -->
+          <button type="submit" class="newtx-submit" id="newtx-submit">Guardar transacción</button>
+          <!-- Delete (only in edit mode) -->
+          <button type="button" class="newtx-delete" id="newtx-delete" style="display:none">Eliminar
+            transacción</button>
+        </form>
+      </div>
+    </div>
   </main>
 
   <script src="index.js"></script>

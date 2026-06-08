@@ -128,10 +128,18 @@ function getIcon(name) {
   if (ICONS[name]) return ICONS[name];
   const nameLower = name.toLowerCase();
   for (const [key, icon] of Object.entries(ICONS)) {
-    const re = new RegExp('\\b' + key.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+    const re = new RegExp(
+      '\\b' + key.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b',
+      'i',
+    );
     if (re.test(nameLower)) return icon;
   }
-  if (name.startsWith('\u2192 ') || name.startsWith('To ') || name.startsWith('From ')) return '\u21C4';
+  if (
+    name.startsWith('\u2192 ') ||
+    name.startsWith('To ') ||
+    name.startsWith('From ')
+  )
+    return '\u21C4';
   return '\uD83D\uDCE6';
 }
 
@@ -595,12 +603,14 @@ function renderDateView(relevant, incomeCatIds) {
         ? '\u2192 ' + t.transfer_acct_name
         : cat?.name || 'Sin categor\u00EDa';
       const payee = t.transfer_acct_name
-        ? (t.notes || '\u2014')
-        : (t.payee_name || t.notes || '\u2014');
+        ? t.notes || '\u2014'
+        : t.payee_name || t.notes || '\u2014';
       const dotClass = t.amount < 0 ? 'expense' : 'income';
       const amtTxClass = t.amount < 0 ? 'expense' : 'income';
       txHtml +=
-        '<div class="date-tx-item" data-tx-id="' + t.id + '"><span class="date-tx-dot ' +
+        '<div class="date-tx-item" data-tx-id="' +
+        t.id +
+        '"><span class="date-tx-dot ' +
         dotClass +
         '"></span><span class="date-tx-category">' +
         escapeHtml(catName) +
@@ -643,11 +653,13 @@ function renderCategory(cat, type) {
   let txHtml = cat.transactions
     .map((t) => {
       const payee = t.transfer_acct_name
-        ? (t.notes || '\u2014')
-        : (t.payee_name || t.notes || '\u2014');
+        ? t.notes || '\u2014'
+        : t.payee_name || t.notes || '\u2014';
       const amtClass = t.amount < 0 ? 'expense' : 'income';
       return (
-        '<div class="transaction-item" data-tx-id="' + t.id + '"><span class="transaction-dot ' +
+        '<div class="transaction-item" data-tx-id="' +
+        t.id +
+        '"><span class="transaction-dot ' +
         amtClass +
         '"></span><span class="transaction-amount ' +
         amtClass +
@@ -801,6 +813,10 @@ periodDatePicker.addEventListener('change', () => {
 
 // Sidebar toggle
 document.getElementById('menu-btn').addEventListener('click', openSidebar);
+document.getElementById('app-title').addEventListener('click', () => {
+  openSidebar();
+  document.getElementById('sidebar-account-list').classList.add('open');
+});
 document
   .getElementById('drawer-overlay')
   .addEventListener('click', closeSidebar);
@@ -914,8 +930,8 @@ async function performSearch() {
   resultsEl.innerHTML = results
     .map((t) => {
       const payee = t.transfer_acct_name
-        ? (t.notes || '\u2014')
-        : (t.payee_name || t.notes || '\u2014');
+        ? t.notes || '\u2014'
+        : t.payee_name || t.notes || '\u2014';
       const amtClass = t.amount < 0 ? 'expense' : 'income';
       const date = new Date(t.date + 'T00:00:00').toLocaleDateString('es-ES', {
         day: 'numeric',
@@ -923,7 +939,9 @@ async function performSearch() {
         year: 'numeric',
       });
       return (
-        '<div class="search-result-item" data-tx-id="' + t.id + '"><span class="sr-date">' +
+        '<div class="search-result-item" data-tx-id="' +
+        t.id +
+        '"><span class="sr-date">' +
         date +
         '</span><span class="sr-payee">' +
         escapeHtml(payee) +
@@ -1018,13 +1036,604 @@ document.getElementById('sync-btn').addEventListener('click', async () => {
   render();
 })();
 
-// ---- Transaction click to edit in Actual Budget ----
+// ---- Transaction click to edit ----
 document.addEventListener('click', (e) => {
   const item = e.target.closest('[data-tx-id]');
   if (!item) return;
   e.stopPropagation();
   const id = item.getAttribute('data-tx-id');
   if (id) {
-    window.open('https://money.dpsconsulting.es/transactions/' + id, '_blank', 'noopener');
+    // Find the transaction in loaded data
+    const tx = transactions.find((t) => t.id === id);
+    if (tx) openEditTxModal(tx);
+  }
+});
+
+// ---- New Transaction Modal ----
+let payeesList = [];
+let editingTxId = null;
+let editingTx = null;
+
+async function fetchPayees() {
+  const res = await fetch('/api/payees');
+  payeesList = await res.json();
+}
+
+function hasFormData() {
+  const amount = document.getElementById('newtx-amount').value;
+  const category = document.getElementById('newtx-category-value').value;
+  const dest = document.getElementById('newtx-dest-value').value;
+  const payee = document.getElementById('newtx-payee-input').value.trim();
+  return !!(amount || category || dest || payee);
+}
+
+function setTxType(type) {
+  const typeSelect = document.getElementById('newtx-type');
+  typeSelect.value = type;
+  const catField = document.getElementById('newtx-category-field');
+  const destField = document.getElementById('newtx-dest-field');
+  const catInput = document.getElementById('newtx-category-input');
+  const destInput = document.getElementById('newtx-dest-input');
+
+  if (type === 'transfer') {
+    catField.style.display = 'none';
+    destField.style.display = '';
+    catInput.removeAttribute('required');
+    destInput.setAttribute('required', '');
+    catInput.setCustomValidity('');
+  } else {
+    catField.style.display = '';
+    destField.style.display = 'none';
+    catInput.setAttribute('required', '');
+    destInput.removeAttribute('required');
+    destInput.setCustomValidity('');
+  }
+}
+
+function openNewTxModal() {
+  editingTxId = null;
+  editingTx = null;
+  document.getElementById('newtx-title').textContent = 'Nueva transacción';
+  document.getElementById('newtx-submit').textContent = 'Guardar transacción';
+  document.getElementById('newtx-delete').style.display = 'none';
+
+  const overlay = document.getElementById('newtx-overlay');
+  overlay.classList.add('visible');
+  document.body.classList.add('modal-open');
+
+  // Set default date to today
+  document.getElementById('newtx-date').value = toDateStr(new Date());
+
+  // Default type: expense
+  setTxType('expense');
+
+  // Set default account to currently viewed account
+  const acctInput = document.getElementById('newtx-account-input');
+  const acctValue = document.getElementById('newtx-account-value');
+  if (selectedAccount !== 'all') {
+    const acct = accounts.find((a) => a.id === selectedAccount);
+    if (acct) {
+      acctInput.value = getAccountIcon(acct.name) + ' ' + acct.name;
+      acctInput.classList.add('selected');
+      acctValue.value = acct.id;
+      acctInput.setCustomValidity('');
+    }
+  } else {
+    acctInput.value = '';
+    acctInput.classList.remove('selected');
+    acctValue.value = '';
+    acctInput.setCustomValidity('Selecciona una cuenta');
+  }
+
+  // Clear other fields
+  document.getElementById('newtx-amount').value = '';
+  document.getElementById('newtx-category-input').value = '';
+  document.getElementById('newtx-category-input').classList.remove('selected');
+  document.getElementById('newtx-category-value').value = '';
+  document
+    .getElementById('newtx-category-input')
+    .setCustomValidity('Selecciona una categoría');
+  document.getElementById('newtx-dest-input').value = '';
+  document.getElementById('newtx-dest-input').classList.remove('selected');
+  document.getElementById('newtx-dest-value').value = '';
+  document.getElementById('newtx-payee-input').value = '';
+
+  // Focus amount field
+  setTimeout(() => document.getElementById('newtx-amount').focus(), 200);
+
+  // Fetch payees if not loaded
+  if (payeesList.length === 0) fetchPayees();
+}
+
+function openEditTxModal(tx) {
+  editingTxId = tx.id;
+  editingTx = tx;
+  document.getElementById('newtx-title').textContent = 'Editar transacción';
+  document.getElementById('newtx-submit').textContent = 'Actualizar';
+  document.getElementById('newtx-delete').style.display = '';
+
+  const overlay = document.getElementById('newtx-overlay');
+  overlay.classList.add('visible');
+  document.body.classList.add('modal-open');
+
+  // Date
+  document.getElementById('newtx-date').value = tx.date;
+
+  // Determine type
+  const isTransfer = !!tx.transfer_acct_name;
+  const isIncome = !isTransfer && tx.amount > 0;
+  const type = isTransfer ? 'transfer' : isIncome ? 'income' : 'expense';
+  setTxType(type);
+
+  // Account
+  const acctInput = document.getElementById('newtx-account-input');
+  const acctValue = document.getElementById('newtx-account-value');
+  const acct = accounts.find((a) => a.id === tx.account_id);
+  if (acct) {
+    acctInput.value = getAccountIcon(acct.name) + ' ' + acct.name;
+    acctInput.classList.add('selected');
+    acctValue.value = acct.id;
+    acctInput.setCustomValidity('');
+  }
+
+  // Amount (always positive in the field)
+  document.getElementById('newtx-amount').value = (
+    Math.abs(tx.amount) / 100
+  ).toFixed(2);
+
+  // Category or transfer destination
+  if (isTransfer) {
+    const destAcct = accounts.find((a) => a.name === tx.transfer_acct_name);
+    const destInput = document.getElementById('newtx-dest-input');
+    const destValue = document.getElementById('newtx-dest-value');
+    if (destAcct) {
+      destInput.value = getAccountIcon(destAcct.name) + ' ' + destAcct.name;
+      destInput.classList.add('selected');
+      destValue.value = destAcct.id;
+      destInput.setCustomValidity('');
+    }
+    document.getElementById('newtx-category-input').value = '';
+    document.getElementById('newtx-category-value').value = '';
+  } else {
+    const cat = categories.find((c) => c.id === tx.category);
+    const catInput = document.getElementById('newtx-category-input');
+    const catValue = document.getElementById('newtx-category-value');
+    if (cat) {
+      catInput.value = getIcon(cat.name) + ' ' + cat.name;
+      catInput.classList.add('selected');
+      catValue.value = cat.id;
+      catInput.setCustomValidity('');
+    } else {
+      catInput.value = '';
+      catInput.classList.remove('selected');
+      catValue.value = '';
+      catInput.setCustomValidity('Selecciona una categoría');
+    }
+  }
+
+  // Payee / description
+  const payeeInput = document.getElementById('newtx-payee-input');
+  payeeInput.value = tx.payee_name || tx.notes || '';
+
+  // Fetch payees if not loaded
+  if (payeesList.length === 0) fetchPayees();
+}
+
+function closeNewTxModal(force) {
+  if (!force && hasFormData()) {
+    if (!confirm('¿Descartar los cambios?')) return;
+  }
+  document.getElementById('newtx-overlay').classList.remove('visible');
+  document.body.classList.remove('modal-open');
+  closeAllDropdowns();
+  editingTxId = null;
+  editingTx = null;
+}
+
+function closeAllDropdowns() {
+  document
+    .querySelectorAll('.newtx-dropdown')
+    .forEach((d) => d.classList.remove('open'));
+}
+
+// Type change handler
+document.getElementById('newtx-type').addEventListener('change', (e) => {
+  setTxType(e.target.value);
+  // Clear category selection since categories differ by type
+  const catInput = document.getElementById('newtx-category-input');
+  catInput.value = '';
+  catInput.classList.remove('selected');
+  document.getElementById('newtx-category-value').value = '';
+  if (e.target.value !== 'transfer') {
+    catInput.setCustomValidity('Selecciona una categoría');
+  }
+});
+
+// FAB opens modal
+document.getElementById('fab-new').addEventListener('click', (e) => {
+  e.preventDefault();
+  openNewTxModal();
+});
+
+// Close modal
+document
+  .getElementById('newtx-close')
+  .addEventListener('click', () => closeNewTxModal());
+document.getElementById('newtx-overlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeNewTxModal();
+});
+
+// ---- Filterable dropdown logic ----
+
+function setupFilterable(inputId, dropdownId, valueId, getItems, onSelect) {
+  const input = document.getElementById(inputId);
+  const dropdown = document.getElementById(dropdownId);
+  const hiddenValue = valueId ? document.getElementById(valueId) : null;
+  let highlighted = -1;
+
+  function renderDropdown(filter) {
+    const items = getItems(filter);
+    if (items.length === 0) {
+      dropdown.classList.remove('open');
+      return;
+    }
+    highlighted = -1;
+    let html = '';
+    let currentGroup = null;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.group && item.group !== currentGroup) {
+        currentGroup = item.group;
+        html +=
+          '<div class="newtx-dropdown-group">' +
+          escapeHtml(currentGroup) +
+          '</div>';
+      }
+      html +=
+        '<div class="newtx-dropdown-item" data-index="' +
+        i +
+        '" data-id="' +
+        (item.id || '') +
+        '" data-label="' +
+        escapeHtml(item.label) +
+        '"><span class="dd-icon">' +
+        (item.icon || '') +
+        '</span><span class="dd-label">' +
+        escapeHtml(item.label) +
+        '</span></div>';
+    }
+    dropdown.innerHTML = html;
+    dropdown.classList.add('open');
+
+    dropdown.querySelectorAll('.newtx-dropdown-item').forEach((el) => {
+      el.addEventListener('click', () => {
+        const id = el.dataset.id;
+        const label = el.dataset.label;
+        const icon = el.querySelector('.dd-icon')?.textContent || '';
+        input.value = icon ? icon + ' ' + label : label;
+        input.classList.add('selected');
+        if (hiddenValue) hiddenValue.value = id;
+        input.setCustomValidity('');
+        dropdown.classList.remove('open');
+        if (onSelect) onSelect(id, label);
+      });
+    });
+  }
+
+  input.addEventListener('focus', () => {
+    renderDropdown(input.classList.contains('selected') ? '' : input.value);
+  });
+
+  input.addEventListener('input', () => {
+    input.classList.remove('selected');
+    if (hiddenValue) {
+      hiddenValue.value = '';
+      input.setCustomValidity('Selecciona una opción de la lista');
+    }
+    renderDropdown(input.value);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    const items = dropdown.querySelectorAll('.newtx-dropdown-item');
+    if (!dropdown.classList.contains('open') || items.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      highlighted = Math.min(highlighted + 1, items.length - 1);
+      items.forEach((el, i) =>
+        el.classList.toggle('highlighted', i === highlighted),
+      );
+      items[highlighted]?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      highlighted = Math.max(highlighted - 1, 0);
+      items.forEach((el, i) =>
+        el.classList.toggle('highlighted', i === highlighted),
+      );
+      items[highlighted]?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlighted >= 0 && items[highlighted]) {
+        items[highlighted].click();
+      }
+    } else if (e.key === 'Escape') {
+      dropdown.classList.remove('open');
+    }
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (
+      !e.target.closest('#' + inputId) &&
+      !e.target.closest('#' + dropdownId)
+    ) {
+      dropdown.classList.remove('open');
+    }
+  });
+}
+
+// Account filterable
+setupFilterable(
+  'newtx-account-input',
+  'newtx-account-dropdown',
+  'newtx-account-value',
+  (filter) => {
+    const f = filter
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    return accounts
+      .filter((a) => !a.closed)
+      .filter(
+        (a) =>
+          !f ||
+          a.name
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .includes(f),
+      )
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((a) => ({ id: a.id, label: a.name, icon: getAccountIcon(a.name) }));
+  },
+);
+
+// Destination account filterable (for transfers)
+setupFilterable(
+  'newtx-dest-input',
+  'newtx-dest-dropdown',
+  'newtx-dest-value',
+  (filter) => {
+    const f = filter
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    return accounts
+      .filter((a) => !a.closed)
+      .filter(
+        (a) =>
+          !f ||
+          a.name
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .includes(f),
+      )
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((a) => ({ id: a.id, label: a.name, icon: getAccountIcon(a.name) }));
+  },
+);
+
+// Category filterable
+setupFilterable(
+  'newtx-category-input',
+  'newtx-category-dropdown',
+  'newtx-category-value',
+  (filter) => {
+    const f = filter
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    const txType = document.getElementById('newtx-type').value;
+    const isIncome = txType === 'income';
+    const items = [];
+    const sortedGroups = [...categoryGroups]
+      .filter((g) => (isIncome ? g.is_income : !g.is_income))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    for (const group of sortedGroups) {
+      const groupCats = categories
+        .filter((c) => c.group_id === group.id)
+        .filter(
+          (c) =>
+            !f ||
+            c.name
+              .toLowerCase()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .includes(f),
+        )
+        .sort((a, b) => a.name.localeCompare(b.name));
+      for (const cat of groupCats) {
+        items.push({
+          id: cat.id,
+          label: cat.name,
+          icon: getIcon(cat.name),
+          group: group.name,
+        });
+      }
+    }
+    return items;
+  },
+);
+
+// Payee filterable
+setupFilterable(
+  'newtx-payee-input',
+  'newtx-payee-dropdown',
+  null,
+  (filter) => {
+    const f = filter
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    return payeesList
+      .filter(
+        (p) =>
+          !f ||
+          p.name
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .includes(f),
+      )
+      .slice(0, 50)
+      .map((p) => ({ id: p.id, label: p.name, icon: '' }));
+  },
+  (id, label) => {
+    document.getElementById('newtx-payee-input').value = label;
+  },
+);
+
+// Form submission
+document.getElementById('newtx-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const txType = document.getElementById('newtx-type').value;
+  const isTransfer = txType === 'transfer';
+
+  // Sync custom validity for filterable selects
+  const acctInput = document.getElementById('newtx-account-input');
+  acctInput.setCustomValidity(
+    document.getElementById('newtx-account-value').value
+      ? ''
+      : 'Selecciona una cuenta',
+  );
+
+  if (isTransfer) {
+    const destInput = document.getElementById('newtx-dest-input');
+    destInput.setCustomValidity(
+      document.getElementById('newtx-dest-value').value
+        ? ''
+        : 'Selecciona una cuenta destino',
+    );
+  } else {
+    const catInput = document.getElementById('newtx-category-input');
+    catInput.setCustomValidity(
+      document.getElementById('newtx-category-value').value
+        ? ''
+        : 'Selecciona una categoría',
+    );
+  }
+
+  const form = document.getElementById('newtx-form');
+  if (!form.reportValidity()) return;
+
+  const btn = document.getElementById('newtx-submit');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+
+  try {
+    const accountId = document.getElementById('newtx-account-value').value;
+    const date = document.getElementById('newtx-date').value;
+    const amountRaw = parseFloat(document.getElementById('newtx-amount').value);
+    const payeeInput = document
+      .getElementById('newtx-payee-input')
+      .value.trim();
+
+    // Convert to cents with correct sign
+    let amountCents = Math.round(Math.abs(amountRaw) * 100);
+    if (txType === 'expense') {
+      amountCents = -amountCents;
+    } else if (txType === 'transfer') {
+      amountCents = -amountCents; // outflow from source account
+    }
+    // income stays positive
+
+    let body;
+    if (isTransfer) {
+      const destId = document.getElementById('newtx-dest-value').value;
+      body = {
+        account_id: accountId,
+        date: date,
+        amount: amountCents,
+        transfer_dest_id: destId,
+        notes: payeeInput || undefined,
+      };
+    } else {
+      const categoryId = document.getElementById('newtx-category-value').value;
+      body = {
+        account_id: accountId,
+        date: date,
+        amount: amountCents,
+        category: categoryId || undefined,
+        payee_name: payeeInput || undefined,
+        notes: payeeInput || undefined,
+      };
+    }
+
+    let resp;
+    if (editingTxId) {
+      resp = await fetch('/api/transactions/' + editingTxId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    } else {
+      resp = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    }
+
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Error al guardar');
+
+    closeNewTxModal(true);
+    await loadData();
+    fetchPayees();
+  } catch (err) {
+    alert('Error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = editingTxId ? 'Actualizar' : 'Guardar transacción';
+  }
+});
+
+// Delete transaction
+document.getElementById('newtx-delete').addEventListener('click', async () => {
+  if (!editingTxId) return;
+
+  const isTransfer = !!editingTx?.transfer_acct_name;
+  const msg = isTransfer
+    ? '¿Eliminar esta transferencia? Se eliminará también la contrapartida.'
+    : '¿Eliminar esta transacción?';
+
+  if (!confirm(msg)) return;
+
+  const btn = document.getElementById('newtx-delete');
+  btn.disabled = true;
+  btn.textContent = 'Eliminando…';
+
+  try {
+    // If it's a transfer, delete the linked transaction too
+    if (isTransfer && editingTx.transfer_id) {
+      await fetch('/api/transactions/' + editingTx.transfer_id, {
+        method: 'DELETE',
+      });
+    }
+    const resp = await fetch('/api/transactions/' + editingTxId, {
+      method: 'DELETE',
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Error al eliminar');
+
+    closeNewTxModal(true);
+    await loadData();
+  } catch (err) {
+    alert('Error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Eliminar transacción';
   }
 });

@@ -318,6 +318,7 @@ body {
   font-size: 18px;
   font-weight: 600;
   color: #eee;
+  cursor: pointer;
 }
 
 .search-btn {
@@ -1078,8 +1079,236 @@ body {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
 }
 
+.fab {
+  border: none;
+}
+
 .fab:active {
   transform: scale(0.95);
+}
+
+/* ===== NEW TRANSACTION MODAL ===== */
+.newtx-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 2000;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.newtx-overlay.visible {
+  display: flex;
+}
+
+body.modal-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+.newtx-modal {
+  width: 100%;
+  max-width: 500px;
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #3a3a3a;
+  padding: 20px;
+  padding-bottom: 40px;
+  margin: 0 auto;
+}
+
+.newtx-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.newtx-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.newtx-close {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.newtx-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.newtx-field label {
+  display: block;
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.newtx-field input[type="date"],
+.newtx-field input[type="number"],
+.newtx-field select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #5a5a5a;
+  background: #2d2d2d;
+  color: #eee;
+  font-size: 15px;
+  -webkit-appearance: none;
+}
+
+.newtx-field select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+.newtx-field input[type="date"]:focus,
+.newtx-field input[type="number"]:focus,
+.newtx-field select:focus,
+.newtx-filterable input:focus {
+  outline: none;
+  border-color: #4a8c4a;
+}
+
+/* Filterable select */
+.newtx-filterable {
+  position: relative;
+}
+
+.newtx-filterable input[type="text"] {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #5a5a5a;
+  background: #2d2d2d;
+  color: #eee;
+  font-size: 15px;
+}
+
+.newtx-filterable input[type="text"].selected {
+  border-color: #5a5a5a;
+}
+
+.newtx-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #2d2d2d;
+  border: 1px solid #5a5a5a;
+  border-radius: 8px;
+  z-index: 10;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.newtx-dropdown.open {
+  display: block;
+}
+
+.newtx-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  border-bottom: 1px solid #3a3a3a;
+  transition: background 0.1s;
+}
+
+.newtx-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.newtx-dropdown-item:hover,
+.newtx-dropdown-item.highlighted {
+  background: #4a4a4a;
+}
+
+.newtx-dropdown-item .dd-icon {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.newtx-dropdown-item .dd-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.newtx-dropdown-group {
+  padding: 6px 14px 4px;
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.newtx-form input:user-invalid {
+  border-color: #c0392b;
+}
+
+.newtx-submit {
+  width: 100%;
+  padding: 14px;
+  border-radius: 8px;
+  border: none;
+  background: #4a8c4a;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: background 0.2s;
+}
+
+.newtx-submit:hover {
+  background: #5a9c5a;
+}
+
+.newtx-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.newtx-delete {
+  width: 100%;
+  padding: 14px;
+  border-radius: 8px;
+  border: none;
+  background: #c0392b;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.newtx-delete:hover {
+  background: #e74c3c;
 }
 
 /* Clickable transactions */
@@ -1135,6 +1364,23 @@ body {
   .main-content>.fab {
     max-width: none;
     width: 56px;
+  }
+
+  .newtx-overlay {
+    align-items: center;
+  }
+
+  .newtx-modal {
+    border-radius: 16px;
+    max-width: 450px;
+    height: auto;
+    max-height: 90vh;
+    padding-bottom: 20px;
+  }
+
+  .main-content>.newtx-overlay {
+    max-width: none;
+    width: auto;
   }
 
   .period-nav {

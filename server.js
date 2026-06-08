@@ -264,6 +264,163 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
+// API: Get payees (for autocomplete)
+app.get('/api/payees', async (req, res) => {
+  try {
+    await ensureInit();
+    const payees = await api.getPayees();
+    // Return only non-transfer payees with their names
+    const result = payees
+      .filter((p) => !p.transfer_acct && p.name)
+      .map((p) => ({ id: p.id, name: p.name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: Add a new transaction
+app.use(express.json());
+app.post('/api/transactions', async (req, res) => {
+  try {
+    await ensureInit();
+    const {
+      account_id,
+      date,
+      amount,
+      category,
+      payee_name,
+      notes,
+      transfer_dest_id,
+    } = req.body;
+
+    if (!account_id || !date || amount == null) {
+      return res
+        .status(400)
+        .json({ error: 'account_id, date, and amount are required' });
+    }
+
+    // Validate date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
+    }
+
+    // Amount comes as cents (integer) from the client
+    const amountInt = Math.round(Number(amount));
+    if (isNaN(amountInt)) {
+      return res.status(400).json({ error: 'amount must be a number' });
+    }
+
+    if (transfer_dest_id) {
+      // Transfer: use the transfer payee for the destination account
+      const payees = await api.getPayees();
+      const transferPayee = payees.find(
+        (p) => p.transfer_acct === transfer_dest_id,
+      );
+      if (!transferPayee) {
+        return res
+          .status(400)
+          .json({
+            error: 'Could not find transfer payee for destination account',
+          });
+      }
+      const txn = {
+        date,
+        amount: amountInt,
+        payee: transferPayee.id,
+        notes: notes || undefined,
+        cleared: true,
+      };
+      await api.addTransactions(account_id, [txn]);
+    } else {
+      const txn = {
+        date,
+        amount: amountInt,
+        category: category || undefined,
+        payee_name: payee_name || undefined,
+        notes: notes || undefined,
+        cleared: true,
+      };
+      await api.addTransactions(account_id, [txn]);
+    }
+
+    await api.sync();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: Update an existing transaction
+app.put('/api/transactions/:id', async (req, res) => {
+  try {
+    await ensureInit();
+    const { id } = req.params;
+    const {
+      date,
+      amount,
+      category,
+      payee_name,
+      notes,
+      transfer_dest_id,
+      account_id,
+    } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ error: 'Transaction id is required' });
+    }
+
+    const fields = {};
+    if (date) fields.date = date;
+    if (amount != null) fields.amount = Math.round(Number(amount));
+    if (category !== undefined) fields.category = category || null;
+    if (notes !== undefined) fields.notes = notes || null;
+
+    if (transfer_dest_id) {
+      // Update to transfer: set the transfer payee
+      const payees = await api.getPayees();
+      const transferPayee = payees.find(
+        (p) => p.transfer_acct === transfer_dest_id,
+      );
+      if (transferPayee) {
+        fields.payee = transferPayee.id;
+        fields.category = null;
+      }
+    } else if (payee_name !== undefined) {
+      // For non-transfer, update payee by name (clear transfer payee)
+      // We need to find or create the payee
+      fields.payee_name = payee_name || null;
+    }
+
+    fields.cleared = true;
+
+    await api.updateTransaction(id, fields);
+    await api.sync();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: Delete a transaction
+app.delete('/api/transactions/:id', async (req, res) => {
+  try {
+    await ensureInit();
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: 'Transaction id is required' });
+    }
+
+    await api.deleteTransaction(id);
+    await api.sync();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // API: Force sync with Actual server
 app.post('/api/sync', async (req, res) => {
   try {
