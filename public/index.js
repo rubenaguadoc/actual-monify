@@ -65,63 +65,84 @@ function getAccountIcon(name) {
 
 // Category icons
 const ICONS = {
-  Salary: '\uD83D\uDCB0',
-  Sueldo: '\uD83D\uDCB0',
-  'N\u00F3mina': '\uD83D\uDCB0',
-  Food: '\uD83C\uDF54',
-  Comida: '\uD83C\uDF54',
+  Salario: '\uD83D\uDCB6',
+  Salary: '\uD83D\uDCB6',
+  Sueldo: '\uD83D\uDCB6',
+  'N\u00F3mina': '\uD83D\uDCB6',
+  Comida: '\uD83E\uDD57',
+  Food: '\uD83E\uDD57',
   'Alimentaci\u00F3n': '\uD83D\uDED2',
   Groceries: '\uD83D\uDED2',
   Supermercado: '\uD83D\uDED2',
-  Transport: '\uD83D\uDE97',
-  Transporte: '\uD83D\uDE97',
+  Transporte: '\uD83D\uDE8C',
+  Transport: '\uD83D\uDE8C',
   Gasolina: '\u26FD',
+  Entretenimiento: '\uD83C\uDFAC',
   Entertainment: '\uD83C\uDFAC',
   Ocio: '\uD83C\uDFAC',
-  Entretenimiento: '\uD83C\uDFAC',
   Shopping: '\uD83D\uDECD\uFE0F',
   Compras: '\uD83D\uDECD\uFE0F',
   Ropa: '\uD83D\uDC55',
-  Health: '\uD83D\uDC8A',
+  Clothes: '\uD83D\uDC55',
   Salud: '\uD83D\uDC8A',
+  Health: '\uD83D\uDC8A',
   'M\u00E9dico': '\uD83C\uDFE5',
+  'Casa Yuncler': '\uD83C\uDFE0',
   Home: '\uD83C\uDFE0',
   Casa: '\uD83C\uDFE0',
   Hogar: '\uD83C\uDFE0',
+  'Alquiler Haro': '\uD83C\uDFE0',
+  'Alquiler Yuncler': '\uD83C\uDFE0',
   Alquiler: '\uD83C\uDFE0',
   Hipoteca: '\uD83C\uDFE0',
+  Impuestos: '\uD83C\uDFF7\uFE0F',
   Bills: '\uD83C\uDFF7\uFE0F',
   Facturas: '\uD83D\uDCC4',
   Suscripciones: '\uD83D\uDCF1',
+  'Formaci\u00F3n': '\uD83D\uDCDA',
   Education: '\uD83D\uDCDA',
   'Educaci\u00F3n': '\uD83D\uDCDA',
+  House: '\uD83C\uDFE0',
   Travel: '\u2708\uFE0F',
   Viajes: '\u2708\uFE0F',
-  Gifts: '\uD83C\uDF81',
   Regalos: '\uD83C\uDF81',
+  Gifts: '\uD83C\uDF81',
+  Deportes: '\uD83C\uDFCB\uFE0F',
   Sports: '\uD83C\uDFCB\uFE0F',
   Deporte: '\uD83C\uDFCB\uFE0F',
+  Gabi: '\uD83D\uDC36',
   Pets: '\uD83D\uDC3E',
   Mascotas: '\uD83D\uDC3E',
-  Gabi: '\uD83D\uDC36',
   Transfers: '\u21C4',
   Transferencias: '\u21C4',
   Inversiones: '\uD83D\uDCC8',
   Investment: '\uD83D\uDCC8',
+  'Comer fuera': '\uD83C\uDF7D\uFE0F',
   Restaurantes: '\uD83C\uDF7D\uFE0F',
   Restaurant: '\uD83C\uDF7D\uFE0F',
   'Eating out': '\uD83C\uDF7D\uFE0F',
   'Eating Out': '\uD83C\uDF7D\uFE0F',
   Taxi: '\uD83D\uDE95',
-  Car: '\uD83D\uDE97',
   Coche: '\uD83D\uDE97',
-  Communications: '\uD83D\uDCF1',
+  Car: '\uD83D\uDE97',
   Comunicaciones: '\uD83D\uDCF1',
+  Communications: '\uD83D\uDCF1',
   Ajustes: '\u2699\uFE0F',
+  'Ajustes (Ingresos)': '\u2699\uFE0F',
   Settings: '\u2699\uFE0F',
   'Caf\u00E9': '\u2615',
   Coffee: '\u2615',
   Pagado: '\uD83D\uDE0A',
+  Savings: '\uD83D\uDC37',
+  Mindfulness: '\uD83E\uDDD8',
+  'Ingresos Mindfulness': '\uD83E\uDDD8',
+  'Starting Balance': '\uD83C\uDFC1',
+  'Starting Balances': '\uD83C\uDFC1',
+  Go: '\uD83D\uDE80',
+  'Pol\u00EDtica': '\uD83C\uDFDB\uFE0F',
+  Politica: '\uD83C\uDFDB\uFE0F',
+  Hotel: '\uD83C\uDFE8',
+  Toiletry: '\uD83E\uDDF4',
 };
 
 function getIcon(name) {
@@ -168,6 +189,12 @@ const COLORS = [
 ];
 
 function getColor(name) {
+  // Override colors for categories with poor emoji/background contrast
+  const COLOR_OVERRIDES = {
+    Pets: '#00b894',
+    Mascotas: '#00b894',
+  };
+  if (COLOR_OVERRIDES[name]) return COLOR_OVERRIDES[name];
   let hash = 0;
   for (let i = 0; i < name.length; i++)
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -1474,6 +1501,8 @@ setupFilterable(
       .replace(/[\u0300-\u036f]/g, '');
     const txType = document.getElementById('newtx-type').value;
     const isIncome = txType === 'income';
+    // Allow the current transaction's category even if hidden
+    const editingCatId = editingTx ? editingTx.category : null;
     const items = [];
     const sortedGroups = [...categoryGroups]
       .filter((g) => (isIncome ? g.is_income : !g.is_income))
@@ -1481,6 +1510,7 @@ setupFilterable(
     for (const group of sortedGroups) {
       const groupCats = categories
         .filter((c) => c.group_id === group.id)
+        .filter((c) => !c.hidden || c.id === editingCatId)
         .filter(
           (c) =>
             !f ||
