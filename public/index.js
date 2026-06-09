@@ -57,6 +57,16 @@ const ACCOUNT_ICONS = {
   MyInvestor: '\uD83D\uDCCA',
   Urbanitae: '\uD83C\uDFE8',
   Valladolid: '\uD83C\uDFD8\uFE0F',
+  '3 Savings Account': '\uD83D\uDC37',
+  '4 Cositos': '\uD83D\uDC91',
+  '4 Revolut': '\u00AE\uFE0F',
+  '6 Deuda Papa': '\uD83E\uDD1D',
+  '9 Tesoro': '\uD83C\uDDEA\uD83C\uDDF8',
+  'Caja Ingenieros': '\uD83D\uDD35',
+  ConCosita: '\uD83D\uDC91',
+  Cosita: '\uD83D\uDC91',
+  'Dep\u00F3sito ING': '\uD83D\uDFE0',
+  'Hucha cositos': '\uD83D\uDC91',
 };
 
 function getAccountIcon(name) {
@@ -404,6 +414,27 @@ function buildAccountList() {
         escapeHtml(a.name) +
         '</span><span class="account-currency">EUR</span></div>';
     });
+
+  const closedAccounts = accounts
+    .filter((a) => a.closed)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (closedAccounts.length) {
+    html += '<div class="sidebar-account-divider">Cuentas cerradas</div>';
+    closedAccounts.forEach((a) => {
+      const icon = getAccountIcon(a.name);
+      const active = selectedAccount === a.id ? ' active' : '';
+      html +=
+        '<div class="sidebar-account-item closed' +
+        active +
+        '" data-account="' +
+        a.id +
+        '"><span class="account-icon">' +
+        icon +
+        '</span><span class="account-name">' +
+        escapeHtml(a.name) +
+        '</span><span class="account-currency">EUR</span></div>';
+    });
+  }
   listEl.innerHTML = html;
 
   listEl.querySelectorAll('.sidebar-account-item').forEach((item) => {
@@ -541,9 +572,10 @@ function renderCategoryView(relevant, incomeCatIds) {
 
   for (const [key, data] of Object.entries(catData)) {
     let name;
+    let transferAcctName = null;
     if (data.catId.startsWith('__transfer__')) {
-      const acctName = data.catId.replace('__transfer__', '');
-      name = '\u2192 ' + acctName;
+      transferAcctName = data.catId.replace('__transfer__', '');
+      name = '\u2192 ' + transferAcctName;
     } else if (data.catId === '__uncategorized__') {
       name = 'Sin categor\u00EDa';
     } else {
@@ -553,6 +585,7 @@ function renderCategoryView(relevant, incomeCatIds) {
     const entry = {
       id: key,
       name,
+      transferAcctName,
       amount: data.amount,
       count: data.transactions.length,
       transactions: data.transactions.sort((a, b) =>
@@ -679,7 +712,9 @@ function renderDateView(relevant, incomeCatIds) {
 
 function renderCategory(cat, type) {
   const color = getColor(cat.name);
-  const icon = getIcon(cat.name);
+  const icon = cat.transferAcctName
+    ? getAccountIcon(cat.transferAcctName)
+    : getIcon(cat.name);
 
   let txHtml = cat.transactions
     .map((t) => {
@@ -1152,6 +1187,7 @@ function openNewTxModal() {
   const overlay = document.getElementById('newtx-overlay');
   overlay.classList.add('visible');
   document.body.classList.add('modal-open');
+  history.pushState({ modal: true }, '');
 
   // Set default date to today
   document.getElementById('newtx-date').value = toDateStr(new Date());
@@ -1207,6 +1243,7 @@ function openEditTxModal(tx) {
   const overlay = document.getElementById('newtx-overlay');
   overlay.classList.add('visible');
   document.body.classList.add('modal-open');
+  history.pushState({ modal: true }, '');
 
   // Date
   document.getElementById('newtx-date').value = tx.date;
@@ -1288,7 +1325,30 @@ function closeNewTxModal(force) {
   editingTxId = null;
   editingTx = null;
   formInitialState = null;
+  // Remove the history entry we pushed when opening
+  if (history.state && history.state.modal) {
+    history.back();
+  }
 }
+
+// Handle back navigation (swipe right on Android) to close modal
+window.addEventListener('popstate', (e) => {
+  if (document.getElementById('newtx-overlay').classList.contains('visible')) {
+    if (hasFormChanged()) {
+      if (!confirm('¿Descartar los cambios?')) {
+        // User cancelled: re-push the state to stay on modal
+        history.pushState({ modal: true }, '');
+        return;
+      }
+    }
+    document.getElementById('newtx-overlay').classList.remove('visible');
+    document.body.classList.remove('modal-open');
+    closeAllDropdowns();
+    editingTxId = null;
+    editingTx = null;
+    formInitialState = null;
+  }
+});
 
 function closeAllDropdowns() {
   document
@@ -1307,6 +1367,19 @@ document.getElementById('newtx-type').addEventListener('change', (e) => {
   if (e.target.value !== 'transfer') {
     catInput.setCustomValidity('Selecciona una categoría');
   }
+});
+
+// Select all text on focus for key form fields
+[
+  'newtx-amount',
+  'newtx-account-input',
+  'newtx-dest-input',
+  'newtx-category-input',
+  'newtx-payee-input',
+].forEach((id) => {
+  document.getElementById(id).addEventListener('focus', (e) => {
+    setTimeout(() => e.target.select(), 0);
+  });
 });
 
 // FAB opens modal
@@ -1583,11 +1656,17 @@ document.getElementById('newtx-form').addEventListener('submit', async (e) => {
 
   if (isTransfer) {
     const destInput = document.getElementById('newtx-dest-input');
-    destInput.setCustomValidity(
-      document.getElementById('newtx-dest-value').value
-        ? ''
-        : 'Selecciona una cuenta destino',
-    );
+    const destId = document.getElementById('newtx-dest-value').value;
+    const sourceId = document.getElementById('newtx-account-value').value;
+    if (!destId) {
+      destInput.setCustomValidity('Selecciona una cuenta destino');
+    } else if (destId === sourceId) {
+      destInput.setCustomValidity(
+        'La cuenta destino debe ser distinta a la de origen',
+      );
+    } else {
+      destInput.setCustomValidity('');
+    }
   } else {
     const catInput = document.getElementById('newtx-category-input');
     catInput.setCustomValidity(
