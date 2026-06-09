@@ -1053,18 +1053,39 @@ document.addEventListener('click', (e) => {
 let payeesList = [];
 let editingTxId = null;
 let editingTx = null;
+let formInitialState = null;
 
 async function fetchPayees() {
   const res = await fetch('/api/payees');
   payeesList = await res.json();
 }
 
-function hasFormData() {
-  const amount = document.getElementById('newtx-amount').value;
-  const category = document.getElementById('newtx-category-value').value;
-  const dest = document.getElementById('newtx-dest-value').value;
-  const payee = document.getElementById('newtx-payee-input').value.trim();
-  return !!(amount || category || dest || payee);
+function getFormState() {
+  return {
+    date: document.getElementById('newtx-date').value,
+    type: document.getElementById('newtx-type').value,
+    account: document.getElementById('newtx-account-value').value,
+    amount: document.getElementById('newtx-amount').value,
+    category: document.getElementById('newtx-category-value').value,
+    dest: document.getElementById('newtx-dest-value').value,
+    payee: document.getElementById('newtx-payee-input').value.trim(),
+  };
+}
+
+function hasFormChanged() {
+  if (!formInitialState) {
+    // New transaction mode: check if anything is filled beyond defaults
+    const amount = document.getElementById('newtx-amount').value;
+    const category = document.getElementById('newtx-category-value').value;
+    const dest = document.getElementById('newtx-dest-value').value;
+    const payee = document.getElementById('newtx-payee-input').value.trim();
+    return !!(amount || category || dest || payee);
+  }
+  // Edit mode: compare current state to initial
+  const current = getFormState();
+  return Object.keys(formInitialState).some(
+    (k) => formInitialState[k] !== current[k],
+  );
 }
 
 function setTxType(type) {
@@ -1213,14 +1234,21 @@ function openEditTxModal(tx) {
 
   // Payee / description
   const payeeInput = document.getElementById('newtx-payee-input');
-  payeeInput.value = tx.payee_name || tx.notes || '';
+  if (isTransfer) {
+    payeeInput.value = tx.notes || '';
+  } else {
+    payeeInput.value = tx.payee_name || tx.notes || '';
+  }
 
   // Fetch payees if not loaded
   if (payeesList.length === 0) fetchPayees();
+
+  // Snapshot initial state for dirty checking
+  formInitialState = getFormState();
 }
 
 function closeNewTxModal(force) {
-  if (!force && hasFormData()) {
+  if (!force && hasFormChanged()) {
     if (!confirm('¿Descartar los cambios?')) return;
   }
   document.getElementById('newtx-overlay').classList.remove('visible');
@@ -1228,6 +1256,7 @@ function closeNewTxModal(force) {
   closeAllDropdowns();
   editingTxId = null;
   editingTx = null;
+  formInitialState = null;
 }
 
 function closeAllDropdowns() {
@@ -1259,8 +1288,17 @@ document.getElementById('fab-new').addEventListener('click', (e) => {
 document
   .getElementById('newtx-close')
   .addEventListener('click', () => closeNewTxModal());
+let overlayMouseDownTarget = null;
+document.getElementById('newtx-overlay').addEventListener('mousedown', (e) => {
+  overlayMouseDownTarget = e.target;
+});
 document.getElementById('newtx-overlay').addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) closeNewTxModal();
+  if (
+    e.target === e.currentTarget &&
+    overlayMouseDownTarget === e.currentTarget
+  ) {
+    closeNewTxModal();
+  }
 });
 
 // ---- Filterable dropdown logic ----
