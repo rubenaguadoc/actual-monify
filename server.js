@@ -396,6 +396,7 @@ app.put('/api/transactions/:id', async (req, res) => {
     const fields = {};
     if (date) fields.date = date;
     if (amount != null) fields.amount = Math.round(Number(amount));
+    if (account_id) fields.account = account_id;
     if (category !== undefined) fields.category = category || null;
     if (notes !== undefined) fields.notes = notes || null;
 

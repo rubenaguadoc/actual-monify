@@ -8,6 +8,7 @@ let categoryGroups = [];
 let transactions = [];
 let selectedAccount = 'all';
 let carryOverBalance = 0;
+let searchResults = [];
 
 // Restore state from localStorage
 (function restoreState() {
@@ -495,9 +496,17 @@ async function fetchCarryOver() {
     upToDate: start,
     account: selectedAccount,
   });
-  const res = await fetch('/api/balance?' + params);
-  const data = await res.json();
-  carryOverBalance = data.balance;
+  try {
+    const res = await fetch('/api/balance?' + params);
+    const data = await res.json();
+    carryOverBalance = data.balance;
+  } catch (e) {
+    // Retry once after a brief delay (server may still be settling after sync)
+    await new Promise((r) => setTimeout(r, 500));
+    const res = await fetch('/api/balance?' + params);
+    const data = await res.json();
+    carryOverBalance = data.balance;
+  }
 }
 
 // ---- Render ----
@@ -997,6 +1006,7 @@ async function performSearch() {
   const params = new URLSearchParams({ q: query });
   const res = await fetch('/api/search?' + params);
   const results = await res.json();
+  searchResults = results;
 
   if (results.length === 0) {
     resultsEl.innerHTML = '<div class="empty">Sin resultados</div>';
@@ -1119,8 +1129,10 @@ document.addEventListener('click', (e) => {
   e.stopPropagation();
   const id = item.getAttribute('data-tx-id');
   if (id) {
-    // Find the transaction in loaded data
-    const tx = transactions.find((t) => t.id === id);
+    // Find the transaction in loaded data or search results
+    const tx =
+      transactions.find((t) => t.id === id) ||
+      searchResults.find((t) => t.id === id);
     if (tx) openEditTxModal(tx);
   }
 });
@@ -1749,6 +1761,15 @@ document.getElementById('newtx-form').addEventListener('submit', async (e) => {
 
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || 'Error al guardar');
+
+    // Switch to the transaction's account if it differs from current view
+    const txAccountId = document.getElementById('newtx-account-value').value;
+    if (!editingTxId && txAccountId && txAccountId !== selectedAccount) {
+      selectedAccount = txAccountId;
+      saveState();
+      updateAccountCurrent();
+      buildAccountList();
+    }
 
     closeNewTxModal(true);
     await loadData();
