@@ -70,6 +70,26 @@ app.get('/api/categories', async (req, res) => {
   }
 });
 
+// `api.updateTransaction` / `api.deleteTransaction` resolve before the write is
+// actually applied to the local database (the underlying batch update is not
+// awaited inside @actual-app/api), so reads and `api.sync()` can run against
+// stale data. These helpers wait until the change is visible.
+async function getTransactionById(id) {
+  const { data } = await api.aqlQuery(
+    api.q('transactions').filter({ id }).select('*'),
+  );
+  return data[0] || null;
+}
+
+async function waitUntil(check, timeoutMs = 5000) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    if (await check()) return true;
+    if (Date.now() >= deadline) return false;
+    await new Promise((r) => setTimeout(r, 50));
+  }
+}
+
 // Helper: subtract one day from a YYYY-MM-DD string
 function dayBefore(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
@@ -393,6 +413,11 @@ app.put('/api/transactions/:id', async (req, res) => {
       return res.status(400).json({ error: 'Transaction id is required' });
     }
 
+    const before = await getTransactionById(id);
+    if (!before) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
     const fields = {};
     if (date) fields.date = date;
     if (amount != null) fields.amount = Math.round(Number(amount));
@@ -430,7 +455,26 @@ app.put('/api/transactions/:id', async (req, res) => {
 
     fields.cleared = true;
 
+    const expected = Object.entries(fields).filter(
+      ([key, value]) => before[key] !== value,
+    );
+
     await api.updateTransaction(id, fields);
+
+    const applied = await waitUntil(async () => {
+      const current = await getTransactionById(id);
+      return (
+        current && expected.every(([key, value]) => current[key] === value)
+      );
+    });
+    if (!applied) {
+      return res
+        .status(500)
+        .json({
+          error: 'El cambio no se pudo aplicar, int\u00E9ntalo de nuevo',
+        });
+    }
+
     await api.sync();
     res.json({ ok: true });
   } catch (err) {
@@ -449,6 +493,7 @@ app.delete('/api/transactions/:id', async (req, res) => {
     }
 
     await api.deleteTransaction(id);
+    await waitUntil(async () => !(await getTransactionById(id)));
     await api.sync();
     res.json({ ok: true });
   } catch (err) {
